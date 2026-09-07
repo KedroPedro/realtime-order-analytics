@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/KedroPedro/realtime-order-analytics/internal/domain/entity"
 	"github.com/jackc/pgx/v5"
@@ -87,12 +86,6 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 		return err
 	}
 
-	insertOutbox :=
-		`
-		INSERT INTO order_outbox (id, event_type, payload, created_at, published_at)
-		VALUES ($1, $2, $3, $4, $5)
-		`
-
 	payload, err := json.Marshal(
 		map[string]any{
 			"order_id": order.Id,
@@ -100,16 +93,21 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 			"total":    order.Total,
 		},
 	)
-
 	if err != nil {
 		return err
 	}
 
+	insertOutbox :=
+		`
+		INSERT INTO order_outbox (id, event_type, payload, created_at)
+		VALUES ($1, $2, $3, $4)
+		`
+
 	if _, err := tx.Exec(
 		ctx,
 		insertOutbox,
-		order.Id, OrderCreatedEvent, payload,
-		order.CreatedAt, time.Now,
+		order.Id, OrderCreatedEvent,
+		payload, order.CreatedAt,
 	); err != nil {
 		return err
 	}
