@@ -17,12 +17,14 @@ type Order struct {
 
 type OrderItem struct {
 	Id       uuid.UUID
+	OrderId  uuid.UUID
 	Name     string
 	Quantity int64
 	Price    int64
 }
 
 type Address struct {
+	Id      uuid.UUID
 	Country string
 	City    string
 	ZIP     string
