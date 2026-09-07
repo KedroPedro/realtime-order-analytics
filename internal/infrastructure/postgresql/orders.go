@@ -10,6 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	OrderCreatedEvent = "order_created"
+)
+
 type OrdersRepo struct {
 	conn *pgxpool.Pool
 }
@@ -104,7 +108,7 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 	if _, err := tx.Exec(
 		ctx,
 		insertOutbox,
-		order.Id, order.event_type, payload,
+		order.Id, OrderCreatedEvent, payload,
 		order.CreatedAt, time.Now,
 	); err != nil {
 		return err
