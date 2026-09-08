@@ -1,4 +1,4 @@
-package postgresql
+package ordersrepo
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type OrdersRepo struct {
 	conn *pgxpool.Pool
 }
 
-func NewOrdersRepo(connPool *pgxpool.Pool) *OrdersRepo {
+func New(connPool *pgxpool.Pool) *OrdersRepo {
 	return &OrdersRepo{
 		conn: connPool,
 	}
@@ -30,20 +30,19 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 	}
 	defer tx.Rollback(ctx)
 
+	batch := &pgx.Batch{}
+
 	insertAddress :=
 		`
 		INSERT INTO addresses (id, country, city, zip)
 		VALUES ($1, $2, $3, %4)
 		`
 
-	if _, err := tx.Exec(
-		ctx,
+	batch.Queue(
 		insertAddress,
 		order.Address.Id, order.Address.Country,
 		order.Address.City, order.Address.ZIP,
-	); err != nil {
-		return err
-	}
+	)
 
 	insertItem :=
 		`
@@ -51,24 +50,12 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 		VALUES ($1, $2, $3, $4, $5)
 		`
 
-	batch := &pgx.Batch{}
 	for _, item := range order.Items {
 		batch.Queue(
 			insertItem,
-			item.Id, item.OrderId, item.Name, item.Quantity, item.Price,
+			item.Id, item.OrderId, item.Name,
+			item.Quantity, item.Price,
 		)
-	}
-
-	res := tx.SendBatch(ctx, batch)
-	for i := 0; i < batch.Len(); i++ {
-		if _, err := res.Exec(); err != nil {
-			res.Close()
-			return err
-		}
-	}
-
-	if err := res.Close(); err != nil {
-		return err
 	}
 
 	insertOrder :=
@@ -77,14 +64,11 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 		VALUES ($1, $2, $3, $4, $5) 
 		`
 
-	if _, err := tx.Exec(
-		ctx,
+	batch.Queue(
 		insertOrder,
 		order.Id, order.OwnerId, order.CreatedAt,
 		order, order.Status, order.Total,
-	); err != nil {
-		return err
-	}
+	)
 
 	payload, err := json.Marshal(
 		map[string]any{
@@ -93,6 +77,7 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 			"total":    order.Total,
 		},
 	)
+
 	if err != nil {
 		return err
 	}
@@ -103,12 +88,22 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 		VALUES ($1, $2, $3, $4)
 		`
 
-	if _, err := tx.Exec(
-		ctx,
+	batch.Queue(
 		insertOutbox,
 		order.Id, OrderCreatedEvent,
 		payload, order.CreatedAt,
-	); err != nil {
+	)
+
+	res := tx.SendBatch(ctx, batch)
+
+	for i := 0; i < batch.Len(); i++ {
+		if _, err := res.Exec(); err != nil {
+			res.Close()
+			return err
+		}
+	}
+
+	if err := res.Close(); err != nil {
 		return err
 	}
 

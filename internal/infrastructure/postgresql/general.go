@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	ordersrepo "github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/postgresql/orders_repo"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,6 +37,6 @@ func NewPostgres() (*Postgres, error) {
 	}, nil
 }
 
-func (p *Postgres) NewOrdersRepo() *OrdersRepo {
-	return NewOrdersRepo(p.connPool)
+func (p *Postgres) NewOrdersRepo() *ordersrepo.OrdersRepo {
+	return ordersrepo.New(p.connPool)
 }
