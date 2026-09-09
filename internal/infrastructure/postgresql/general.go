@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	ordersoutboxrepo "github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/postgresql/orders_outbox_repo"
 	ordersrepo "github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/postgresql/orders_repo"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -39,4 +40,8 @@ func NewPostgres() (*Postgres, error) {
 
 func (p *Postgres) NewOrdersRepo() *ordersrepo.OrdersRepo {
 	return ordersrepo.New(p.connPool)
+}
+
+func (p *Postgres) NewOrdersOutboxRepo() *ordersoutboxrepo.OrdersOutboxRepo {
+	return ordersoutboxrepo.New(p.connPool)
 }
