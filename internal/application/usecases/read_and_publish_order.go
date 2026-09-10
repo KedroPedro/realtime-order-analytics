@@ -11,7 +11,7 @@ type ReadAndPublishOrderUsecase struct {
 	publisher interfaces.EventPublisher
 }
 
-func newReadAndPublishOrderUsecase(
+func NewReadAndPublishOrderUsecase(
 	outbox interfaces.OrdersOutbox,
 	publisher interfaces.EventPublisher,
 ) *ReadAndPublishOrderUsecase {
