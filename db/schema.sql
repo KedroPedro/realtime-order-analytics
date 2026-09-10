@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS orders(
     address_id UUID NOT NULL REFERENCES addresses(id),
     status VARCHAR(20) NOT NULL,
     total BIGINT NOT NULL
-)
+);
 
 CREATE TABLE IF NOT EXISTS items (
     id UUID PRIMARY KEY,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS items (
     name VARCHAR(200) NOT NULL,
     quantity BIGINT NOT NULL,
     price BIGINT NOT NULL    
-)
+);
 
 CREATE TABLE IF NOT EXISTS order_outbox (
     id UUID PRIMARY KEY,
@@ -31,4 +31,8 @@ CREATE TABLE IF NOT EXISTS order_outbox (
     locked_at TIMESTAMPTZ,
     locked_by VARCHAR(50),
     attempts INT NOT NULL DEFAULT 0
-)
+);
+
+CREATE INDEX idx_order_outbox_process 
+    ON order_outbox (status, locked_at, created_at)
+    WHERE status IN ('pending', 'processing');

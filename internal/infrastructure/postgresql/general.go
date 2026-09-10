@@ -45,3 +45,7 @@ func (p *Postgres) NewOrdersRepo() *ordersrepo.OrdersRepo {
 func (p *Postgres) NewOrdersOutboxRepo() *ordersoutboxrepo.OrdersOutboxRepo {
 	return ordersoutboxrepo.New(p.connPool)
 }
+
+func (p *Postgres) NewCleanOutboxRepo() *ordersoutboxrepo.OutboxCleaner {
+	return ordersoutboxrepo.NewOutboxCleaner(p.connPool)
+}

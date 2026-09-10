@@ -7,6 +7,7 @@ import (
 
 	"github.com/KedroPedro/realtime-order-analytics/internal/application/usecases"
 	"github.com/KedroPedro/realtime-order-analytics/internal/controller/worker"
+	"github.com/KedroPedro/realtime-order-analytics/internal/controller/worker/cleaner"
 	"github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/kafka"
 	"github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/postgresql"
 	"github.com/rs/zerolog/log"
@@ -27,7 +28,7 @@ func main() {
 		log.Fatal().Err(err).Send()
 	}
 
-	uc := usecases.NewReadAndPublishOrderUsecase(
+	workUsecase := usecases.NewReadAndPublishOrderUsecase(
 		psql.NewOrdersOutboxRepo(),
 		kfk.NewEventPublisher(),
 	)
@@ -35,12 +36,22 @@ func main() {
 	workers := make([]*worker.OutboxWorker, numWorkers)
 
 	for i := range numWorkers {
-		workers = append(workers, worker.NewOutboxWorker(uc))
+		workers = append(workers, worker.NewOutboxWorker(workUsecase))
 		go func(i int) {
 			log.Debug().Msg(fmt.Sprintf("worker %d started", i))
 			workers[i].Start()
 		}(i)
 	}
+
+	cleanUsecase := usecases.NewCleanOutboxUsecasee(
+		psql.NewCleanOutboxRepo(),
+	)
+
+	cleaner := cleaner.NewOutboxCleaner(cleanUsecase.Execute)
+
+	go func() {
+		cleaner.Start()
+	}()
 
 	stopCh := make(chan os.Signal, 2)
 	signal.Notify(stopCh, os.Interrupt, os.Kill)
@@ -50,5 +61,6 @@ func main() {
 	for _, w := range workers {
 		w.Stop()
 	}
+	cleaner.Stop()
 
 }

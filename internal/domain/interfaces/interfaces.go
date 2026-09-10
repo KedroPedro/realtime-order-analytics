@@ -15,6 +15,10 @@ type OrdersOutbox interface {
 	PublishEvents(ctx context.Context, events []entity.OrderOutbox) error
 }
 
+type OutboxCleaner interface {
+	Clean(ctx context.Context) error
+}
+
 type EventPublisher interface {
 	PublishBatch(ctx context.Context, events []entity.OrderOutbox) error
 }

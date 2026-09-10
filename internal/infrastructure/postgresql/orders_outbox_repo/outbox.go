@@ -74,7 +74,8 @@ func (or *OrdersOutboxRepo) GetEventsBatch(ctx context.Context, locker string) (
 			SET 
 				locked_at = $1,
 				locked_by = $2,
-				attempts = attempts + 1
+				attempts = attempts + 1,
+				status = 'processing'
 			WHERE id = $3
 		`
 
