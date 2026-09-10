@@ -21,8 +21,8 @@ func NewReadAndPublishOrderUsecase(
 	}
 }
 
-func (uc *ReadAndPublishOrderUsecase) Execute(ctx context.Context) error {
-	events, err := uc.outbox.GetEventsBatch(ctx)
+func (uc *ReadAndPublishOrderUsecase) Execute(ctx context.Context, locker string) error {
+	events, err := uc.outbox.GetEventsBatch(ctx, locker)
 	if err != nil {
 		return err
 	}

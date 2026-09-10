@@ -27,5 +27,8 @@ CREATE TABLE IF NOT EXISTS order_outbox (
     event_type VARCHAR(50) NOT NULL,
     payload JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    published_at TIMESTAMPTZ
+    published_at TIMESTAMPTZ,
+    locked_at TIMESTAMPTZ,
+    locked_by VARCHAR(50),
+    attempts INT NOT NULL DEFAULT 0
 )

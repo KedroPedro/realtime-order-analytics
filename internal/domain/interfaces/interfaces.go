@@ -11,7 +11,7 @@ type Orders interface {
 }
 
 type OrdersOutbox interface {
-	GetEventsBatch(ctx context.Context) ([]entity.OrderOutbox, error)
+	GetEventsBatch(ctx context.Context, locker string) ([]entity.OrderOutbox, error)
 	PublishEvents(ctx context.Context, events []entity.OrderOutbox) error
 }
 
