@@ -34,7 +34,7 @@ func (or *OrdersOutboxRepo) GetEventsBatch(ctx context.Context, locker string) (
 	getOrders := fmt.Sprintf(
 		`
 			SELECT id, event_type, payload, created_at FROM order_outbox
-			WHERE published_at IS NULL AND locked_at IS NULL
+			WHERE published_at IS NULL AND locked_at IS NULL AND status = 'pending'
 			ORDER BY created_at ASC
 			LIMIT %d
 			FOR UPDATE SKIP LOCKED
@@ -70,7 +70,7 @@ func (or *OrdersOutboxRepo) GetEventsBatch(ctx context.Context, locker string) (
 
 	lockOrders :=
 		`
-			UPDATE order_oubtox
+			UPDATE order_outbox
 			SET 
 				locked_at = $1,
 				locked_by = $2,
@@ -115,7 +115,7 @@ func (or *OrdersOutboxRepo) PublishEvents(ctx context.Context, events []entity.O
 	publishEvents :=
 		`
 			UPDATE order_outbox
-			SET published_at = $1
+			SET published_at = $1, status = 'published'
 			WHERE id = $2
 		`
 
@@ -123,7 +123,7 @@ func (or *OrdersOutboxRepo) PublishEvents(ctx context.Context, events []entity.O
 	for _, event := range events {
 		batch.Queue(
 			publishEvents,
-			time.Now, event.Id,
+			time.Now(), event.Id,
 		)
 	}
 

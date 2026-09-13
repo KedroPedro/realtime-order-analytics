@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/KedroPedro/realtime-order-analytics/internal/application/usecases"
+	orderuc "github.com/KedroPedro/realtime-order-analytics/internal/application/usecases/order"
 	"github.com/rs/zerolog/log"
 )
 
 type OrdersHandler struct {
-	createUsecase *usecases.CreateOrderUsecase
+	createUsecase *orderuc.CreateOrderUsecase
 }
 
-func NewOrdersHandler(uc *usecases.CreateOrderUsecase) *OrdersHandler {
+func NewOrdersHandler(uc *orderuc.CreateOrderUsecase) *OrdersHandler {
 	return &OrdersHandler{
 		createUsecase: uc,
 	}
@@ -26,23 +26,24 @@ func (h *OrdersHandler) HandleCreateOrder(w http.ResponseWriter, r *http.Request
 
 	var createOrderReq CreateOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&createOrderReq); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "invalid json", http.StatusBadRequest)
 		log.Err(err).Send()
 		return
 	}
 
 	order, err := createOrderReq.ToEntity()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "incorrect fields", http.StatusInternalServerError)
 		log.Err(err).Send()
 		return
 	}
 
 	if err := h.createUsecase.Execute(ctx, order); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "create order error", http.StatusInternalServerError)
 		log.Err(err).Send()
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }

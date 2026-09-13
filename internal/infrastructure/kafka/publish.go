@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/KedroPedro/realtime-order-analytics/internal/domain/entity"
 	"github.com/segmentio/kafka-go"
@@ -21,14 +22,19 @@ func NewEventPublisher(writer *kafka.Writer) *EventPublisher {
 func (ep *EventPublisher) PublishBatch(ctx context.Context, events []entity.OrderOutbox) error {
 	msgs := make([]kafka.Message, len(events))
 	bEvent := make([]byte, 0, 1<<7)
+
 	var err error
 
 	for _, event := range events {
+		if !json.Valid(event.Payload) {
+			return fmt.Errorf("invalid event payload: %q", string(event.Payload))
+		}
+
 		bEvent, err = json.Marshal(map[string]any{
 			"id":         event.Id,
 			"event_type": event.EventType,
 			"created_at": event.CreatedAt,
-			"payload":    event.Payload,
+			"payload":    json.RawMessage(event.Payload),
 		})
 		if err != nil {
 			return err

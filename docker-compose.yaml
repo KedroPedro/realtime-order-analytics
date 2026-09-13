@@ -1,0 +1,97 @@
+services:
+  postgresql:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: orderdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro 
+
+  kafka:
+    image: apache/kafka:3.7.0
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: "1"
+      KAFKA_DEFAULT_REPLICATION_FACTOR: "1"
+      CLUSTER_ID: "Mk30U2qxRvKjyqJLqNqN2Q"
+    ports:
+      - "9092:9092"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8-alpine
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: pass
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      CLICKHOUSE_ALWAYS_RUN_INITDB_SCRIPTS: 1
+    depends_on:
+      - kafka      
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./db/clickhouse.sql:/docker-entrypoint-initdb.d/schema.sql:ro 
+
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order.Dockerfile
+    depends_on:
+      - postgresql
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      HTTP_ADDR: "0.0.0.0:8080"
+      POSTGRES_CONN_STRING: "postgresql://user:password@postgresql:5432/orderdb"
+
+  order-worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    depends_on:
+      - postgresql
+      - kafka
+      - clickhouse
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      POSTGRES_CONN_STRING: "postgresql://user:password@postgresql:5432/orderdb"
+
+  analytic-service:
+    build:
+      context: .
+      dockerfile: analytic.Dockerfile
+    depends_on:
+      - clickhouse
+      - kafka
+    ports:
+      - "8081:8080"
+    environment:
+      HTTP_ADDR: "0.0.0.0:8080"
+      CLICKHOUSE_ADDR: "clickhouse:9000"
+      CLICKHOUSE_DATABASE: "analytics"
+      CLICKHOUSE_USERNAME: "user"
+      CLICKHOUSE_PASSWORD: "pass"
+      CLICKHOUSE_CLIENT_NAME: "analytic-service"
+      CLICKHOUSE_CLIENT_VER: "1.0.0"
+
+volumes:
+  postgres_data:
+  kafka_data:
+  clickhouse_data:

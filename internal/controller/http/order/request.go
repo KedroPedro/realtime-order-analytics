@@ -25,10 +25,6 @@ type AddressInput struct {
 	ZIP     string `json:"zip"`
 }
 
-const (
-	orderNewStatus = "new"
-)
-
 func (r *CreateOrderRequest) ToEntity() (*entity.Order, error) {
 	orderID := uuid.NewV7()
 	ownerID, err := uuid.Parse(r.OwnerID)
@@ -63,7 +59,6 @@ func (r *CreateOrderRequest) ToEntity() (*entity.Order, error) {
 		CreatedAt: time.Now(),
 		Items:     items,
 		Address:   address,
-		Status:    orderNewStatus,
 		Total:     calcTotal(items),
 	}, nil
 }

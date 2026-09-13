@@ -23,8 +23,8 @@ func (oc *OutboxCleaner) Clean(ctx context.Context) error {
 			SET 
 				locked_at = NULL,
 				locked_by = NULL,
-				status = 'pending',
-			WHERE status == 'processing'
+				status = 'pending'
+			WHERE status = 'processing'
 				AND locked_at < NOW() - INTERVAL '5 minutes'
 		`
 

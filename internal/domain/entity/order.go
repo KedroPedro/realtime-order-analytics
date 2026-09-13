@@ -11,7 +11,6 @@ type Order struct {
 	CreatedAt time.Time
 	Items     []OrderItem
 	Address   *Address
-	Status    string
 	Total     int64
 }
 

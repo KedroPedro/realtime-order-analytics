@@ -1,11 +1,12 @@
-package worker
+package main
 
 import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 
-	"github.com/KedroPedro/realtime-order-analytics/internal/application/usecases"
+	workeruc "github.com/KedroPedro/realtime-order-analytics/internal/application/usecases/worker"
 	"github.com/KedroPedro/realtime-order-analytics/internal/controller/worker"
 	"github.com/KedroPedro/realtime-order-analytics/internal/controller/worker/cleaner"
 	"github.com/KedroPedro/realtime-order-analytics/internal/infrastructure/kafka"
@@ -28,22 +29,26 @@ func main() {
 		log.Fatal().Err(err).Send()
 	}
 
-	workUsecase := usecases.NewReadAndPublishOrderUsecase(
+	if err := kfk.SetupOrderOutboxTopic(); err != nil {
+		log.Fatal().Err(err).Send()
+	}
+
+	workUsecase := workeruc.NewReadAndPublishOrderUsecase(
 		psql.NewOrdersOutboxRepo(),
 		kfk.NewEventPublisher(),
 	)
 
-	workers := make([]*worker.OutboxWorker, numWorkers)
+	workers := make([]*worker.OutboxWorker, 0, numWorkers)
 
 	for i := range numWorkers {
-		workers = append(workers, worker.NewOutboxWorker(workUsecase))
+		workers = append(workers, worker.NewOutboxWorker(workUsecase, fmt.Sprintf("%d", i)))
 		go func(i int) {
 			log.Debug().Msg(fmt.Sprintf("worker %d started", i))
 			workers[i].Start()
 		}(i)
 	}
 
-	cleanUsecase := usecases.NewCleanOutboxUsecasee(
+	cleanUsecase := workeruc.NewCleanOutboxUsecasee(
 		psql.NewCleanOutboxRepo(),
 	)
 
@@ -54,7 +59,7 @@ func main() {
 	}()
 
 	stopCh := make(chan os.Signal, 2)
-	signal.Notify(stopCh, os.Interrupt, os.Kill)
+	signal.Notify(stopCh, os.Interrupt, syscall.SIGTERM)
 
 	<-stopCh
 	log.Debug().Msg("shutting down")

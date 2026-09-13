@@ -1,4 +1,4 @@
-package usecases
+package orderuc
 
 import (
 	"context"

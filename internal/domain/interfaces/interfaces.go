@@ -22,3 +22,9 @@ type OutboxCleaner interface {
 type EventPublisher interface {
 	PublishBatch(ctx context.Context, events []entity.OrderOutbox) error
 }
+
+type OrderAnalytic interface {
+	GetDailyOrderTrends(ctx context.Context) ([]entity.DailyOrderTrend, error)
+	GetTopClients(ctx context.Context) ([]entity.TopClient, error)
+	GetStatisticsByHours(ctx context.Context) ([]entity.HourStatistic, error)
+}

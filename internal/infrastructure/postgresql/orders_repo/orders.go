@@ -35,7 +35,7 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 	insertAddress :=
 		`
 		INSERT INTO addresses (id, country, city, zip)
-		VALUES ($1, $2, $3, %4)
+		VALUES ($1, $2, $3, $4)
 		`
 
 	batch.Queue(
@@ -44,9 +44,21 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 		order.Address.City, order.Address.ZIP,
 	)
 
+	insertOrder :=
+		`
+		INSERT INTO orders (id, owner_id, created_at, address_id, total)
+		VALUES ($1, $2, $3, $4, $5) 
+		`
+
+	batch.Queue(
+		insertOrder,
+		order.Id, order.OwnerId, order.CreatedAt,
+		order.Address.Id, order.Total,
+	)
+
 	insertItem :=
 		`
-		INSERT INTO order_items (id, order_id, name, quantity, price)
+		INSERT INTO items (id, order_id, name, quantity, price)
 		VALUES ($1, $2, $3, $4, $5)
 		`
 
@@ -57,18 +69,6 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 			item.Quantity, item.Price,
 		)
 	}
-
-	insertOrder :=
-		`
-		INSERT INTO orders (id, owner_id, created_at, address_id, status, total)
-		VALUES ($1, $2, $3, $4, $5) 
-		`
-
-	batch.Queue(
-		insertOrder,
-		order.Id, order.OwnerId, order.CreatedAt,
-		order, order.Status, order.Total,
-	)
 
 	payload, err := json.Marshal(
 		map[string]any{
@@ -84,8 +84,8 @@ func (or *OrdersRepo) CreateOrder(ctx context.Context, order *entity.Order) erro
 
 	insertOutbox :=
 		`
-		INSERT INTO order_outbox (id, event_type, payload, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO order_outbox (id, event_type, payload, created_at, status)
+		VALUES ($1, $2, $3, $4, 'pending')
 		`
 
 	batch.Queue(

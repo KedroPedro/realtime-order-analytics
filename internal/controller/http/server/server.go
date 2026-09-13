@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -18,8 +18,9 @@ type Server struct {
 	srv *http.Server
 }
 
-func NewServer(mux *http.ServeMux) *Server {
+func New(mux *http.ServeMux) *Server {
 	srv := http.Server{
+		Handler:      mux,
 		Addr:         os.Getenv(envHTTPAddr),
 		IdleTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 5,

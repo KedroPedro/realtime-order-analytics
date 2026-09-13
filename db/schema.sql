@@ -1,16 +1,17 @@
+\c orderdb
+
 CREATE TABLE IF NOT EXISTS addresses (
     id UUID PRIMARY KEY,
     country VARCHAR(50) NOT NULL,
     city VARCHAR(50) NOT NULL,
     zip VARCHAR(12) NOT NULL    
-)
+);
 
 CREATE TABLE IF NOT EXISTS orders(
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     address_id UUID NOT NULL REFERENCES addresses(id),
-    status VARCHAR(20) NOT NULL,
     total BIGINT NOT NULL
 );
 
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS order_outbox (
     payload JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     published_at TIMESTAMPTZ,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending', 
     locked_at TIMESTAMPTZ,
     locked_by VARCHAR(50),
     attempts INT NOT NULL DEFAULT 0
